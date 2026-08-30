@@ -1,0 +1,54 @@
+# Builds the addon zip and attaches it to a GitHub release.
+#
+# The point of this is folder naming. WoW requires an addon's folder to match
+# its .toc filename, but GitHub's "Download ZIP" button produces
+# say-what-main/, which does not. The asset built here unpacks straight into
+# Interface\AddOns as SayWhat/.
+#
+# Push a tag to cut a release:  git tag v1.1.0 && git push origin v1.1.0
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
+      - name: Run the test suite
+        run: lua5.1 tests/run.lua
+
+      - name: Stamp the version from the tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sed -i "s/^## Version:.*/## Version: ${version}/" SayWhat/SayWhat.toc
+          grep '^## Version:' SayWhat/SayWhat.toc
+
+      - name: Build the addon zip
+        run: zip -r "SayWhat-${GITHUB_REF_NAME}.zip" SayWhat
+
+      - name: Check the zip unpacks as Interface\AddOns\SayWhat
+        run: |
+          unzip -l "SayWhat-${GITHUB_REF_NAME}.zip"
+          unzip -l "SayWhat-${GITHUB_REF_NAME}.zip" | grep -q 'SayWhat/SayWhat.toc'
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "SayWhat $GITHUB_REF_NAME" \
+            --generate-notes \
+            "SayWhat-${GITHUB_REF_NAME}.zip"

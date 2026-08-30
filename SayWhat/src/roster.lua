@@ -87,7 +87,7 @@ end
 
 -------------------------------------------------------------------------------
 -- The roster as a sorted array, most recently heard first, for the menu and
--- the /sw list command.
+-- the list command.
 --
 -- Each item: { name, last, count, class, zone, selected, nearby }
 --

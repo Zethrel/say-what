@@ -20,7 +20,7 @@ from scratch with no library dependencies.
   players you selected.
 - **Player selection menu** — click **Players** in the window (or right-click
   the window body) for a checklist of everyone nearby.
-- **Manage players from chat** — `/sw list` prints the roster with clickable
+- **Manage players from chat** — `/saywhat list` prints the roster with clickable
   `[+]` / `[-]` buttons, and right-clicking a player's name in the chat window
   gets a *SayWhat: Add to Nearby* entry.
 - **Roleplay names** — shows the name from Total RP 3, MyRolePlay or XRP when
@@ -34,29 +34,39 @@ from scratch with no library dependencies.
 
 ## Installing
 
-Copy the **`SayWhat`** folder from this repository into
-`World of Warcraft\_retail_\Interface\AddOns\`, so that this exact path
-exists:
+**Download the zip from [Releases](https://github.com/Zethrel/say-what/releases)**, not the green *Code → Download ZIP* button. Unpack it into:
+
+```
+World of Warcraft\_retail_\Interface\AddOns\
+```
+
+so that this exact path exists:
 
 ```
 Interface\AddOns\SayWhat\SayWhat.toc
 ```
 
-Copy the `SayWhat` folder, not the repository folder. WoW requires an addon's
-folder name to match its `.toc` filename exactly, and this repository is called
-`say-what`, which does not match. That's why the addon lives in a subfolder.
-
 **Then restart the game client.** WoW only scans `Interface\AddOns` when it
-launches; `/reload` re-runs the addons it already found and will never pick up a
-newly added folder.
+launches; `/reload` re-runs the addons it already found and will never pick up
+a newly added folder.
+
+### Why not the Download ZIP button
+
+GitHub's source zip unpacks as `say-what-main`, named after the repository and
+branch. WoW requires an addon's folder name to match its `.toc` filename
+exactly, so `say-what-main` is invisible to the game and `say-what-main\SayWhat`
+is one level too deep. The release asset is built to unpack correctly as
+`SayWhat`; the source zip needs you to reach inside it and copy the `SayWhat`
+folder out yourself.
+
+Building the same zip locally, if you'd rather: `sh tools/package.sh`.
 
 ### The addon doesn't appear in the list
 
 In order of likelihood:
 
-1. **The folder name is wrong.** `Interface\AddOns\say-what\SayWhat.toc` does
-   not work, and neither does a nested `SayWhat\SayWhat\SayWhat.toc` (which is
-   what unzipping a GitHub download usually gives you). The `.toc` has to sit
+1. **The folder name is wrong.** `Interface\AddOns\say-what-main\` and
+   `Interface\AddOns\SayWhat\SayWhat\` both fail. The `.toc` has to sit
    directly inside a folder named `SayWhat`.
 2. **The client wasn't restarted.** See above — `/reload` is not enough.
 3. **You're looking at the wrong game version.** `_retail_`, not `_classic_`.
@@ -76,27 +86,32 @@ A `nil` name means the folder still isn't where WoW is looking.
 
 ## Commands
 
-`/saywhat`, `/sw` and `/nearby` all work.
+`/saywhat`, `/sayw` and `/nearby` all work. **`/sw` is deliberately not one of
+them** — that's Blizzard's stopwatch.
+
+Before claiming a name the addon checks whether anything already answers to it,
+so a clash with another addon costs that one alias rather than breaking
+somebody else's command. `/saywhat status` lists what actually got registered.
 
 | Command | What it does |
 | --- | --- |
-| `/sw` | Toggle the Nearby window |
-| `/sw list` | List the roster with `[+]`/`[-]` links |
-| `/sw menu` | Open the player selection menu |
-| `/sw add [name]` | Show a player — defaults to your target or mouseover |
-| `/sw remove [name]` | Stop showing a player |
-| `/sw toggle [name]` | Flip a player on or off |
-| `/sw all` | Select everyone currently in range |
-| `/sw clear` | Deselect everyone |
-| `/sw forget` | Empty the roster (selected players are kept) |
-| `/sw show`, `/sw hide` | Open/close the window |
-| `/sw lock`, `/sw unlock` | Lock the window's position and size |
-| `/sw minimap` | Show or hide the minimap button |
-| `/sw status` | Print what the addon currently thinks is going on |
-| `/sw help` | The list above, in game |
+| `/saywhat` | Toggle the Nearby window |
+| `/saywhat list` | List the roster with `[+]`/`[-]` links |
+| `/saywhat menu` | Open the player selection menu |
+| `/saywhat add [name]` | Show a player — defaults to your target or mouseover |
+| `/saywhat remove [name]` | Stop showing a player |
+| `/saywhat toggle [name]` | Flip a player on or off |
+| `/saywhat all` | Select everyone currently in range |
+| `/saywhat clear` | Deselect everyone |
+| `/saywhat forget` | Empty the roster (selected players are kept) |
+| `/saywhat show`, `/saywhat hide` | Open/close the window |
+| `/saywhat lock`, `/saywhat unlock` | Lock the window's position and size |
+| `/saywhat minimap` | Show or hide the minimap button |
+| `/saywhat status` | Print what the addon currently thinks is going on |
+| `/saywhat help` | The list above, in game |
 
 Names are matched case-insensitively against players you've heard, so
-`/sw add alice` finds `Alice-WyrmrestAccord` if she's the Alice you heard.
+`/saywhat add alice` finds `Alice-WyrmrestAccord` if she's the Alice you heard.
 Otherwise your own realm is assumed.
 
 ## How "nearby" is decided
@@ -146,7 +161,7 @@ Three things worth knowing:
   people change them mid-session, so the roster, the selection and the saved
   variables all stay keyed on `Character-Realm`. Only what you see changes. A
   filter set up under one roleplay name keeps working after it changes.
-- **Commands accept both.** `/sw add elowen` works on a roleplay name (whole
+- **Commands accept both.** `/saywhat add elowen` works on a roleplay name (whole
   name or first name) as well as the character name, and the Players menu lists
   both so you can see who you're actually ticking.
 
@@ -197,6 +212,8 @@ SayWhat/                 The addon folder - this is what you copy into AddOns
   src/links.lua          Clickable [+]/[-] chat links
   src/commands.lua       Slash commands
 tests/                   Headless test suite (see below), not shipped
+tools/package.sh         Builds the release zip
+.github/workflows/       Builds and publishes that zip on a version tag
 ```
 
 ## Tests
@@ -220,11 +237,11 @@ menu and chat links.
 The mock can't prove how the real client behaves, so these are worth walking
 through in game after any change:
 
-1. **Range** — stand in a city, `/sw status`, and watch the roster fill as
+1. **Range** — stand in a city, `/saywhat status`, and watch the roster fill as
    people talk. Walk away from a talkative group until their says stop arriving
    and confirm nobody new is added past that point.
 2. **Names** — check a cross-realm player (`Name-Realm` shown in full) and a
-   same-realm one (realm hidden), and that `/sw add <partial case>` finds them.
+   same-realm one (realm hidden), and that `/saywhat add <partial case>` finds them.
    Test a text emote (`/wave` at you) from a cross-realm player.
 3. **Reload** — select two players, `/reload`, confirm they're still selected
    and the window reopens where you left it.
@@ -234,14 +251,14 @@ through in game after any change:
 5. **Filtering** — with one player selected, have two people talk and confirm
    only the selected one appears; tick the second in the **Players** menu and
    confirm their earlier lines appear too.
-6. **Chat management** — `/sw list`, click `[+]` and `[-]`; right-click a name
+6. **Chat management** — `/saywhat list`, click `[+]` and `[-]`; right-click a name
    in the default chat frame and use the *SayWhat* entry.
 7. **Instances** — zone into a dungeon and confirm the addon stays quiet and
    error-free (chat is unreadable to addons there).
 8. **Roleplay names** — with TRP3 running, confirm a selected player shows
    their RP name, and that someone whose profile you haven't loaded starts as a
    character name and switches over within a few seconds of you mousing over
-   them. `/sw status` reports which roleplay addon was detected.
+   them. `/saywhat status` reports which roleplay addon was detected.
 
 ## License
 

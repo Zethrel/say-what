@@ -112,7 +112,8 @@ function Menu.Show( owner, entries )
 	end
 
 	if not UIDropDownMenu_Initialize then
-		Me.Print( "This client has no menu API that I know how to use. Use /sw list instead." )
+		Me.Print( "This client has no menu API that I know how to use. Use %s list instead.",
+		          Me.SlashCommand() )
 		return
 	end
 
