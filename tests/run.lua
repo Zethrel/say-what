@@ -852,6 +852,79 @@ test( "a broken roleplay addon costs a name, not the window", function()
 end)
 
 -------------------------------------------------------------------------------
+-- Minimap button
+-------------------------------------------------------------------------------
+
+test( "the minimap button toggles the window and opens the menu", function()
+	local Me = StartSession()
+	local button = Me.Minimap.button
+
+	check( button, "the button was created on login" )
+	check( button:IsShown(), "and is shown by default" )
+
+	button.scripts.OnClick( button, "LeftButton" )
+	check( Me.Window.IsShown(), "left-click opens the window" )
+
+	button.scripts.OnClick( button, "LeftButton" )
+	check( not Me.Window.IsShown(), "and closes it again" )
+
+	button.scripts.OnClick( button, "RightButton" )
+	check( WoW.last_menu and WoW.last_menu:Find( "Nearby Players" ),
+	       "right-click opens the player selection menu" )
+end)
+
+test( "dragging the minimap button moves it and the angle persists", function()
+	local Me = StartSession()
+	local button = Me.Minimap.button
+	local original = Me.db.settings.minimap.angle
+
+	-- Drag to a point straight above the minimap's center: 90 degrees.
+	button.scripts.OnDragStart( button )
+	WoW.cursor.x, WoW.cursor.y = 500, 600
+	button.scripts.OnUpdate( button )
+	button.scripts.OnDragStop( button )
+
+	equals( math.floor( Me.db.settings.minimap.angle + 0.5 ), 90,
+	        "the angle follows the cursor" )
+	check( Me.db.settings.minimap.angle ~= original, "and changed from the default" )
+	check( button.scripts.OnUpdate == nil, "the drag handler is cleaned up" )
+
+	local x, y = select( 4, button:GetPoint() )
+	check( math.abs( x ) < 0.01, "sits directly above the center on x" )
+	check( y > 0, "and above it on y" )
+
+	Me = StartSession( SaveSession() )
+	equals( math.floor( Me.db.settings.minimap.angle + 0.5 ), 90,
+	        "the angle survives a reload" )
+end)
+
+test( "the minimap button can be hidden, and stays hidden", function()
+	local Me = StartSession()
+
+	Command( Me, "minimap" )
+	check( not Me.Minimap.button:IsShown(), "/sw minimap hides it" )
+
+	Me = StartSession( SaveSession() )
+	check( not Me.Minimap.button:IsShown(), "still hidden after a reload" )
+
+	Command( Me, "minimap" )
+	check( Me.Minimap.button:IsShown(), "and can be brought back" )
+end)
+
+test( "the minimap option in the menu matches the button", function()
+	local Me = StartSession()
+	Me.Menu.OpenPlayerSelect( Me.Window.frame )
+
+	local option = WoW.last_menu:Find( "Minimap button" )
+	check( option, "the option is in the menu" )
+	check( option.checked(), "checked while the button is shown" )
+
+	option.func()
+	check( not Me.Minimap.button:IsShown(), "clicking it hides the button" )
+	check( not option.checked(), "and the checkbox follows" )
+end)
+
+-------------------------------------------------------------------------------
 -- Run
 -------------------------------------------------------------------------------
 

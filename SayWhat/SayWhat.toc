@@ -17,5 +17,6 @@ src\log.lua
 src\rpnames.lua
 src\menu.lua
 src\window.lua
+src\minimap.lua
 src\links.lua
 src\commands.lua

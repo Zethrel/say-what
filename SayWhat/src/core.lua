@@ -108,6 +108,12 @@ local DEFAULT_DB = {
 		font_size  = 12;
 		locked     = false;
 
+		-- The minimap button. Angle is degrees around the minimap's ring.
+		minimap = {
+			show  = true;
+			angle = 200;
+		};
+
 		window = {
 			point   = "CENTER";
 			relpoint= "CENTER";
@@ -466,6 +472,7 @@ function Me.OnPlayerLogin()
 
 	Me.RPNames.Setup()
 	Me.Window.Create()
+	Me.Minimap.Create()
 
 	if Me.db.settings.window.shown then
 		Me.Window.Show()

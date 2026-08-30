@@ -38,6 +38,11 @@ function Widget.new( kind, name, parent )
 	self.height   = 260
 	self.point    = { "CENTER", nil, "CENTER", 0, 0 }
 	self.text     = ""
+	-- Set explicitly: the catch-all __index below would otherwise turn an
+	-- unset data field into a no-op function.
+	self.scale    = 1
+	self.center_x = 0
+	self.center_y = 0
 	return self
 end
 
@@ -101,6 +106,9 @@ function Widget:GetNumMessages() return #self.lines end
 
 function Widget:GetFont() return "Fonts\\FRIZQT__.TTF", 12, "" end
 
+function Widget:GetCenter() return self.center_x or 0, self.center_y or 0 end
+function Widget:GetEffectiveScale() return self.scale or 1 end
+
 M.Widget = Widget
 
 -------------------------------------------------------------------------------
@@ -147,6 +155,19 @@ function M.Install( opts )
 	end
 
 	_G.ChatFontNormal = Widget.new( "Font", "ChatFontNormal" )
+
+	-- The minimap, sized and centered like the default UI's.
+	_G.Minimap = Widget.new( "Frame", "Minimap" )
+	_G.Minimap.width    = 140
+	_G.Minimap.height   = 140
+	_G.Minimap.center_x = 500
+	_G.Minimap.center_y = 400
+
+	_G.GameTooltip = Widget.new( "Frame", "GameTooltip" )
+
+	-- Where the mouse is, for minimap button dragging.
+	M.cursor = { x = 0, y = 0 }
+	_G.GetCursorPosition = function() return M.cursor.x, M.cursor.y end
 
 	_G.C_AddOns = {
 		GetAddOnMetadata = function( addon, field )

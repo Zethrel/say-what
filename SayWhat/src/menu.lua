@@ -240,6 +240,11 @@ local function OptionsEntries()
 		Flag( "announce_new", "Announce new players in chat" ),
 		Flag( "locked",       "Lock window",         function() Me.Window.ApplySettings() end ),
 
+		{ type    = "checkbox";
+		  text    = "Minimap button";
+		  checked = function() return Me.db.settings.minimap.show and true or false end;
+		  func    = function() Me.Minimap.SetShown( nil ) end },
+
 		{ type = "divider" },
 
 		{ type = "button", text = "Font size +", func = function()
