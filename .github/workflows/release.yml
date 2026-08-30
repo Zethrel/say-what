@@ -5,14 +5,20 @@
 # say-what-main/, which does not. The asset built here unpacks straight into
 # Interface\AddOns as SayWhat/.
 #
-# Push a tag to cut a release:  git tag v1.1.0 && git push origin v1.1.0
+# Triggered by any tag, whatever it's called, because a release that doesn't
+# get its asset attached is worse than one built from an oddly named tag. The
+# version comes from the .toc, not from the tag, so bump
+# "## Version:" in SayWhat/SayWhat.toc before tagging.
+#
+# Works whether you push a tag or publish a release from the web UI, which
+# creates the tag and fires this the same way.
 
 name: Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
 
 permissions:
   contents: write
@@ -30,19 +36,18 @@ jobs:
       - name: Run the test suite
         run: lua5.1 tests/run.lua
 
-      - name: Stamp the version from the tag
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          sed -i "s/^## Version:.*/## Version: ${version}/" SayWhat/SayWhat.toc
-          grep '^## Version:' SayWhat/SayWhat.toc
-
+      # tools/package.sh builds the zip and asserts it contains
+      # SayWhat/SayWhat.toc, so the check lives in one place and anyone can
+      # run the same thing locally.
       - name: Build the addon zip
-        run: zip -r "SayWhat-${GITHUB_REF_NAME}.zip" SayWhat
+        id: build
+        run: echo "asset=$(sh tools/package.sh)" >> "$GITHUB_OUTPUT"
 
-      - name: Check the zip unpacks as Interface\AddOns\SayWhat
+      - name: Show what's in it
         run: |
-          unzip -l "SayWhat-${GITHUB_REF_NAME}.zip"
-          unzip -l "SayWhat-${GITHUB_REF_NAME}.zip" | grep -q 'SayWhat/SayWhat.toc'
+          unzip -l "${{ steps.build.outputs.asset }}"
+          echo "### ${{ steps.build.outputs.asset }}" >> "$GITHUB_STEP_SUMMARY"
+          grep '^## Version:' SayWhat/SayWhat.toc >> "$GITHUB_STEP_SUMMARY"
 
       # Two ways to get here: pushing a tag, or publishing a release from the
       # web UI (which creates the tag, firing this same workflow). In the
@@ -52,7 +57,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          asset="SayWhat-${GITHUB_REF_NAME}.zip"
+          asset="${{ steps.build.outputs.asset }}"
 
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             echo "Release already exists, uploading the asset to it."
