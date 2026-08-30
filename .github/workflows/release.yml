@@ -44,11 +44,22 @@ jobs:
           unzip -l "SayWhat-${GITHUB_REF_NAME}.zip"
           unzip -l "SayWhat-${GITHUB_REF_NAME}.zip" | grep -q 'SayWhat/SayWhat.toc'
 
+      # Two ways to get here: pushing a tag, or publishing a release from the
+      # web UI (which creates the tag, firing this same workflow). In the
+      # second case the release already exists, so attach the asset to it
+      # rather than failing on a duplicate.
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            --title "SayWhat $GITHUB_REF_NAME" \
-            --generate-notes \
-            "SayWhat-${GITHUB_REF_NAME}.zip"
+          asset="SayWhat-${GITHUB_REF_NAME}.zip"
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "Release already exists, uploading the asset to it."
+            gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --title "SayWhat $GITHUB_REF_NAME" \
+              --generate-notes \
+              "$asset"
+          fi
