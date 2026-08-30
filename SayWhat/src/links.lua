@@ -1,7 +1,7 @@
 -------------------------------------------------------------------------------
 -- SayWhat - clickable chat links.
 --
--- /sw list prints the roster with [+] / [-] buttons next to each name, so you
+-- The list command prints the roster with [+] / [-] buttons next to each name, so you
 -- can manage the filter straight from the chat window without retyping names.
 --
 -- Custom link types printed into a chat frame end up in SetItemRef, which we

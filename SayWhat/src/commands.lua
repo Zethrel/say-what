@@ -1,7 +1,12 @@
 -------------------------------------------------------------------------------
 -- SayWhat - slash commands.
 --
---   /saywhat, /sw, /nearby
+--   /saywhat, /sayw, /nearby
+--
+-- /sw is deliberately not among them: that's Blizzard's stopwatch. Before
+-- claiming a name we check whether anything else already answers to it, so a
+-- clash with another addon costs us that one alias rather than breaking
+-- somebody's command.
 --
 -------------------------------------------------------------------------------
 
@@ -72,25 +77,35 @@ local function ListPlayers()
 end
 
 -------------------------------------------------------------------------------
+-- Help is built around whichever command name we actually managed to claim,
+-- so it never tells anyone to type something that isn't registered.
+--
 local HELP = {
 	"|cff4fd1c5SayWhat|r - tracks who talks in /say range.",
-	"  |cffffff00/sw|r - toggle the Nearby window.",
-	"  |cffffff00/sw list|r - list nearby players, with [+]/[-] to filter them.",
-	"  |cffffff00/sw menu|r - open the player selection menu.",
-	"  |cffffff00/sw add [name]|r - show a player (defaults to your target).",
-	"  |cffffff00/sw remove [name]|r - stop showing a player.",
-	"  |cffffff00/sw toggle [name]|r - flip a player on or off.",
-	"  |cffffff00/sw all|r - select everyone currently in range.",
-	"  |cffffff00/sw clear|r - deselect everyone.",
-	"  |cffffff00/sw forget|r - empty the roster of players you haven't picked.",
-	"  |cffffff00/sw show|r, |cffffff00/sw hide|r, |cffffff00/sw lock|r",
-	"  |cffffff00/sw minimap|r - show or hide the minimap button.",
-	"  |cffffff00/sw status|r - what the addon currently thinks is going on.",
+	"  |cffffff00%s|r - toggle the Nearby window.",
+	"  |cffffff00%s list|r - list nearby players, with [+]/[-] to filter them.",
+	"  |cffffff00%s menu|r - open the player selection menu.",
+	"  |cffffff00%s add [name]|r - show a player (defaults to your target).",
+	"  |cffffff00%s remove [name]|r - stop showing a player.",
+	"  |cffffff00%s toggle [name]|r - flip a player on or off.",
+	"  |cffffff00%s all|r - select everyone currently in range.",
+	"  |cffffff00%s clear|r - deselect everyone.",
+	"  |cffffff00%s forget|r - empty the roster of players you haven't picked.",
+	"  |cffffff00%s show|r, |cffffff00%s hide|r, |cffffff00%s lock|r",
+	"  |cffffff00%s minimap|r - show or hide the minimap button.",
+	"  |cffffff00%s status|r - what the addon currently thinks is going on.",
 }
 
 local function PrintHelp()
+	local main = Me.SlashCommand()
+
 	for _, line in ipairs( HELP ) do
-		Me.Print( line )
+		Me.Print( (line:gsub( "%%s", main )) )
+	end
+
+	if #Me.slash_names > 1 then
+		Me.Print( "  Also answers to %s.",
+		          table.concat( Me.slash_names, ", ", 2, #Me.slash_names ) )
 	end
 end
 
@@ -115,6 +130,12 @@ local function PrintStatus()
 	Me.Print( "Shown in window: %s.",
 	          #shown > 0 and table.concat( shown, ", " ) or "nothing" )
 	Me.Print( "Buffered messages: %d.", #Me.Log.All() )
+
+	Me.Print( "Commands: %s.", table.concat( Me.slash_names, ", " ) )
+	for _, clash in ipairs( Me.slash_conflicts ) do
+		Me.Print( "|cffff8080%s is taken by %s, so it wasn't registered.|r",
+		          clash.token, clash.owner )
+	end
 
 	local source = Me.RPNames.Source()
 	if not Me.db.settings.rp_names then
@@ -193,7 +214,7 @@ function Me.RunCommand( msg )
 		PrintHelp()
 
 	else
-		Me.Print( "Don't know \"%s\". Try /sw help.", command )
+		Me.Print( "Don't know \"%s\". Try %s help.", command, Me.SlashCommand() )
 	end
 end
 
@@ -206,10 +227,62 @@ function Me.MenuOwner()
 end
 
 -------------------------------------------------------------------------------
+-- The names we'd like, best first. /sw is Blizzard's stopwatch and is not
+-- among them.
+--
+local SLASH_TOKENS = { "/saywhat", "/sayw", "/nearby" }
+
+-- The ones we actually registered, and anything we had to skip.
+Me.slash_names     = {}
+Me.slash_conflicts = {}
+
+-------------------------------------------------------------------------------
+-- The command to tell people to type: the first name we claimed.
+--
+function Me.SlashCommand()
+	return Me.slash_names[1] or SLASH_TOKENS[1]
+end
+
+-------------------------------------------------------------------------------
+-- Who, if anyone, already answers to this slash command.
+--
+-- Blizzard's own commands are registered when FrameXML loads, well before us,
+-- so they're all visible here. Addons that load after us are not, which is why
+-- this is a courtesy rather than a guarantee.
+--
+local function SlashCommandOwner( token )
+	for name in pairs( SlashCmdList ) do
+		for index = 1, 20 do
+			local existing = _G["SLASH_" .. name .. index]
+			if not existing then break end
+			if existing:lower() == token then return name end
+		end
+	end
+end
+
+-------------------------------------------------------------------------------
 function Me.SetupCommands()
-	SLASH_SAYWHAT1 = "/saywhat"
-	SLASH_SAYWHAT2 = "/sw"
-	SLASH_SAYWHAT3 = "/nearby"
+	Me.slash_names     = {}
+	Me.slash_conflicts = {}
+
+	for _, token in ipairs( SLASH_TOKENS ) do
+		local owner = SlashCommandOwner( token )
+		if owner then
+			table.insert( Me.slash_conflicts, { token = token, owner = owner } )
+		else
+			table.insert( Me.slash_names, token )
+		end
+	end
+
+	if #Me.slash_names == 0 then
+		-- Everything we wanted is taken. Register the primary name anyway:
+		-- fighting over it beats having no way to reach the addon at all.
+		Me.slash_names = { SLASH_TOKENS[1] }
+	end
+
+	for index, token in ipairs( Me.slash_names ) do
+		_G["SLASH_SAYWHAT" .. index] = token
+	end
 
 	SlashCmdList["SAYWHAT"] = function( msg )
 		Me.RunCommand( msg )

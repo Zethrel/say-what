@@ -321,7 +321,7 @@ function Me.ResolveName( input )
 		end
 	end
 
-	-- Then by roleplay name, so "/sw add elowen" works when that's the only
+	-- Then by roleplay name, so "add elowen" works when that's the only
 	-- name you've seen. Both the whole name and its first word are accepted.
 	if Me.db.settings.rp_names then
 		for name in pairs( known ) do

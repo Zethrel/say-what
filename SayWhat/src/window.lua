@@ -377,9 +377,10 @@ function Window.Refresh()
 
 	if shown == 0 then
 		if Me.SelectedCount() == 0 then
-			frame.chat:AddMessage(
+			frame.chat:AddMessage( string.format(
 				"|cff808080No players selected. Click |rPlayers|cff808080 above, " ..
-				"or use |r/sw add <name>|cff808080.|r", 0.7, 0.7, 0.7 )
+				"or use |r%s add <name>|cff808080.|r", Me.SlashCommand() ),
+				0.7, 0.7, 0.7 )
 		else
 			frame.chat:AddMessage(
 				"|cff808080Nothing heard from your selection yet.|r", 0.7, 0.7, 0.7 )

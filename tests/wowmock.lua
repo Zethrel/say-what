@@ -226,7 +226,20 @@ function M.Install( opts )
 		ROGUE  = { r = 1.0,  g = 0.96, b = 0.41, colorStr = "fffff569" };
 	}
 
-	_G.SlashCmdList  = {}
+	-- Blizzard's own slash commands are registered by FrameXML before any
+	-- addon loads. The stopwatch is the one that matters to us: it owns /sw.
+	_G.SlashCmdList = { STOPWATCH = function() end }
+	_G.SLASH_STOPWATCH1 = "/stopwatch"
+	_G.SLASH_STOPWATCH2 = "/timer"
+	_G.SLASH_STOPWATCH3 = "/sw"
+
+	-- Register another addon's command, to test how we handle a clash.
+	M.AddSlashCommand = function( name, ... )
+		_G.SlashCmdList[name] = function() end
+		for index = 1, select( "#", ... ) do
+			_G["SLASH_" .. name .. index] = (select( index, ... ))
+		end
+	end
 	_G.IsShiftKeyDown = function() return false end
 
 	_G.SetItemRef = function( link, text, button, frame )

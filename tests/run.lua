@@ -73,6 +73,8 @@ local function StartSession( saved, opts )
 		_G[name] = nil
 	end
 
+	for index = 1, 5 do _G["SLASH_SAYWHAT" .. index] = nil end
+
 	WoW.Install( opts )
 
 	-- Roleplay addons load before we do, so install them before login for the
@@ -91,6 +93,20 @@ local function StartSession( saved, opts )
 	WoW.FireEvent( "ADDON_LOADED", "SayWhat" )
 	WoW.FireEvent( "PLAYER_LOGIN" )
 
+	return Me
+end
+
+-- Load the addon into an environment a test has already set up (used by the
+-- slash command tests, which register other addons' commands first).
+local function StartSessionWithExisting()
+	local Me = {}
+	for _, file in ipairs( FILES ) do
+		local chunk = assert( loadfile( ADDON .. file ) )
+		chunk( "SayWhat", Me )
+	end
+
+	WoW.FireEvent( "ADDON_LOADED", "SayWhat" )
+	WoW.FireEvent( "PLAYER_LOGIN" )
 	return Me
 end
 
@@ -922,6 +938,79 @@ test( "the minimap option in the menu matches the button", function()
 	option.func()
 	check( not Me.Minimap.button:IsShown(), "clicking it hides the button" )
 	check( not option.checked(), "and the checkbox follows" )
+end)
+
+-------------------------------------------------------------------------------
+-- Slash commands
+-------------------------------------------------------------------------------
+
+test( "we never claim /sw, which is Blizzard's stopwatch", function()
+	local Me = StartSession()
+
+	for _, name in ipairs( Me.slash_names ) do
+		check( name ~= "/sw", "/sw must not be one of ours" )
+	end
+
+	equals( SLASH_STOPWATCH3, "/sw", "and the stopwatch still has it" )
+	equals( _G.SlashCmdList.STOPWATCH ~= nil, true, "with its handler intact" )
+end)
+
+test( "the commands we do claim are registered", function()
+	local Me = StartSession()
+
+	equals( Me.SlashCommand(), "/saywhat", "the primary name" )
+	equals( SLASH_SAYWHAT1, "/saywhat", "registered with the game" )
+	equals( SLASH_SAYWHAT2, "/sayw", "short form" )
+	equals( SLASH_SAYWHAT3, "/nearby", "and the long one" )
+	check( SlashCmdList["SAYWHAT"], "with a handler" )
+end)
+
+test( "a name another addon already owns is left alone", function()
+	WoW.Install({})
+	WoW.AddSlashCommand( "SOMEOTHERADDON", "/sayw" )
+
+	-- Load into the session that already has that command registered.
+	local Me = StartSessionWithExisting()
+
+	for _, name in ipairs( Me.slash_names ) do
+		check( name ~= "/sayw", "/sayw belongs to somebody else" )
+	end
+
+	local found
+	for _, clash in ipairs( Me.slash_conflicts ) do
+		if clash.token == "/sayw" then found = clash end
+	end
+	check( found, "the clash was recorded" )
+	equals( found.owner, "SOMEOTHERADDON", "along with who owns it" )
+
+	equals( Me.SlashCommand(), "/saywhat", "and we still have a way in" )
+end)
+
+test( "if everything is taken we claim the primary name anyway", function()
+	WoW.Install({})
+	WoW.AddSlashCommand( "HOSTILEADDON", "/saywhat", "/sayw", "/nearby" )
+
+	local Me = StartSessionWithExisting()
+
+	equals( #Me.slash_names, 1, "one name registered" )
+	equals( Me.SlashCommand(), "/saywhat", "the primary one" )
+	equals( #Me.slash_conflicts, 3, "all three clashes recorded" )
+end)
+
+test( "help and the window hint name a command that exists", function()
+	local Me = StartSession()
+
+	WoW.chat_output = {}
+	Command( Me, "help" )
+	local help = table.concat( WoW.chat_output, "\n" )
+
+	check( help:find( "/saywhat list", 1, true ), "help uses the claimed name" )
+	check( not help:find( "/sw ", 1, true ), "and never mentions /sw" )
+	check( help:find( "/sayw, /nearby", 1, true ), "the aliases are listed" )
+
+	Me.Window.Show()
+	check( WindowHas( Me, "/saywhat add <name>" ),
+	       "the empty-window hint uses it too" )
 end)
 
 -------------------------------------------------------------------------------

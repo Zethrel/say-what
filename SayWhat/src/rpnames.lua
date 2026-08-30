@@ -169,7 +169,7 @@ local function GetFromMSP( full )
 end
 
 -------------------------------------------------------------------------------
--- Which RP addon we're reading from, for /sw status. nil when there is none.
+-- Which RP addon we're reading from, for the status command. nil when there is none.
 --
 function RPNames.Source()
 	if _G.TRP3_API then return "Total RP 3" end
