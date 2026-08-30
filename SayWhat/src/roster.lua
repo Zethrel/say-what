@@ -236,7 +236,17 @@ end
 -- Class colored display name.
 --
 function Me.ColorName( full )
-	local short = Me.ShortName( full )
+	local name = Me.DisplayName( full )
+
+	-- A roleplay profile can carry its own name color. Opt-in, since class
+	-- colors tell you something and custom ones can be hard to read.
+	if Me.db.settings.rp_names and Me.db.settings.rp_colors then
+		local _, rp_color = Me.RPNames.Get( full )
+		if rp_color then
+			return "|c" .. rp_color .. name .. "|r"
+		end
+	end
+
 	local entry = Me.chardb and Me.chardb.roster and Me.chardb.roster[full]
 	local class = entry and entry.class
 
@@ -247,8 +257,8 @@ function Me.ColorName( full )
 		if not hex then
 			hex = string.format( "ff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255 )
 		end
-		return "|c" .. hex .. short .. "|r"
+		return "|c" .. hex .. name .. "|r"
 	end
 
-	return short
+	return name
 end

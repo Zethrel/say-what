@@ -68,11 +68,18 @@ local FILES = LoadOrder()
 -- previous session's "SavedVariables file", addon loaded, player logged in.
 local function StartSession( saved, opts )
 	for _, name in ipairs({ "SayWhat", "SayWhatDB", "SayWhatCharDB",
-	                        "SayWhatNearbyFrame", "SayWhat_OnCompartmentClick" }) do
+	                        "SayWhatNearbyFrame", "SayWhat_OnCompartmentClick",
+	                        "TRP3_API", "msp" }) do
 		_G[name] = nil
 	end
 
 	WoW.Install( opts )
+
+	-- Roleplay addons load before we do, so install them before login for the
+	-- tests that care about our profile-update hooks.
+	if opts and opts.trp3 then WoW.InstallTRP3( opts.trp3 ) end
+	if opts and opts.msp  then WoW.InstallMSP( opts.msp )   end
+
 	WoW.LoadVariables( saved )
 
 	local Me = {}
@@ -92,11 +99,21 @@ local function SaveSession()
 	return WoW.SaveVariables({ "SayWhatDB", "SayWhatCharDB" })
 end
 
--- Text of every line currently in the Nearby window.
+-- Strip hyperlink and color escapes so assertions can read like the text a
+-- player sees, rather than the markup underneath it.
+local function Readable( text )
+	text = text:gsub( "|H.-|h", "" )      -- opening link tag, e.g. |Hsaywhatname:X|h
+	text = text:gsub( "|h", "" )          -- its closing tag
+	text = text:gsub( "|c%x%x%x%x%x%x%x%x", "" )
+	text = text:gsub( "|r", "" )
+	return text
+end
+
+-- Text of every line currently in the Nearby window, as it reads on screen.
 local function WindowLines( Me )
 	local lines = {}
 	for _, line in ipairs( Me.Window.frame.chat.lines ) do
-		table.insert( lines, line.text )
+		table.insert( lines, Readable( line.text ) )
 	end
 	return lines
 end
@@ -587,6 +604,251 @@ test( "the log is capped so a busy city cannot grow it forever", function()
 
 	local last = Me.Log.All()[ #Me.Log.All() ]
 	equals( last.m, "message 900", "the newest message is the one kept" )
+end)
+
+-------------------------------------------------------------------------------
+-- Roleplay names
+-------------------------------------------------------------------------------
+
+test( "a Total RP 3 name is shown instead of the character name", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({
+		["Alice-MoonGuard"] = { FN = "Elowen", LN = "Duskwhisper" };
+	})
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Elowen Duskwhisper", "display name" )
+	check( WindowHas( Me, "Elowen Duskwhisper: well met" ), "the window uses it" )
+	check( not WindowHas( Me, "Alice: well met" ), "and not the character name" )
+end)
+
+test( "a character with no profile keeps their character name", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Bob-MoonGuard"] = { FN = "Bartholomew" } })
+	Me.RPNames.ClearCache()
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Alice",
+	        "nobody has sent us Alice's profile" )
+	equals( Me.DisplayName( "Bob-MoonGuard" ), "Bartholomew", "but Bob's arrived" )
+end)
+
+test( "names update retroactively when a profile arrives later", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({})
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+
+	check( WindowHas( Me, "Alice: well met" ), "character name until the profile lands" )
+
+	-- Her profile arrives a moment later, the way TRP3 fetches on proximity.
+	WoW.TRP3AddProfile( "Alice-MoonGuard", { FN = "Elowen", LN = "Duskwhisper" } )
+	Me.RPNames.Poll()
+
+	check( WindowHas( Me, "Elowen Duskwhisper: well met" ),
+	       "the line already on screen is rewritten" )
+	check( not WindowHas( Me, "Alice: well met" ), "the old name is gone" )
+end)
+
+test( "a profile-received callback refreshes the window", function()
+	-- Installed before login, so our hook into TRP3's update event registers.
+	local Me = StartSession( nil, { trp3 = {} } )
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+
+	WoW.TRP3AddProfile( "Alice-MoonGuard", { FN = "Elowen" } )
+	WoW.TRP3FireUpdate()
+	WoW.RunTimers()   -- the refresh is coalesced behind a short timer
+
+	check( WindowHas( Me, "Elowen: well met" ), "updated without waiting for the poll" )
+end)
+
+test( "MSP names are read, with the title stripped", function()
+	local Me = StartSession()
+	WoW.InstallMSP({
+		["Alice-MoonGuard"] = { NA = "Lady Elowen Duskwhisper" };
+		["Bob-MoonGuard"]   = { NA = "Bartholomew" };
+	})
+	Me.RPNames.ClearCache()
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Elowen Duskwhisper",
+	        "the title is dropped" )
+	equals( Me.DisplayName( "Bob-MoonGuard" ), "Bartholomew",
+	        "a single word is left alone" )
+end)
+
+test( "a color code in an MSP name is parsed out, not printed", function()
+	local Me = StartSession()
+	WoW.InstallMSP({
+		["Alice-MoonGuard"] = { NA = "|cffaa66ccElowen|r" };
+	})
+	Me.RPNames.ClearCache()
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Elowen", "the name is clean" )
+
+	local _, color = Me.RPNames.Get( "Alice-MoonGuard" )
+	equals( color, "ffaa66cc", "and the color came back separately" )
+end)
+
+test( "roleplay colors are opt-in", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({
+		["Alice-MoonGuard"] = { FN = "Elowen", CH = "aa66cc" };
+	})
+	Me.RPNames.ClearCache()
+
+	check( not Me.ColorName( "Alice-MoonGuard" ):find( "aa66cc", 1, true ),
+	       "off by default" )
+
+	Me.db.settings.rp_colors = true
+	Me.RPNames.ClearCache()
+	check( Me.ColorName( "Alice-MoonGuard" ):find( "|cffaa66ccElowen|r", 1, true ),
+	       "on when asked for" )
+end)
+
+test( "turning roleplay names off goes back to character names", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "Elowen" } })
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+	check( WindowHas( Me, "Elowen: well met" ), "roleplay name to start" )
+
+	Me.db.settings.rp_names = false
+	Me.Window.Refresh()
+	check( WindowHas( Me, "Alice: well met" ), "character name once turned off" )
+end)
+
+test( "identity stays the character name, never the roleplay name", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "Elowen", LN = "Duskwhisper" } })
+	Me.RPNames.ClearCache()
+
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+	Me.SetSelected( "Alice-MoonGuard", true )
+
+	check( Me.chardb.roster["Alice-MoonGuard"], "the roster keys on the character" )
+	check( Me.chardb.selected["Alice-MoonGuard"], "so does the selection" )
+	check( not Me.chardb.selected["Elowen Duskwhisper"], "not on the roleplay name" )
+
+	local saved = SaveSession()
+	check( not saved:find( "Elowen", 1, true ),
+	       "and no roleplay name is written to disk" )
+
+	-- A roleplay name change must not break an existing selection.
+	WoW.TRP3AddProfile( "Alice-MoonGuard", { FN = "Someone", LN = "Else" } )
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	WoW.Say( "CHAT_MSG_SAY", "still me", "Alice" )
+	check( WindowHas( Me, "Someone Else: still me" ), "the filter still matches her" )
+end)
+
+test( "a player can be added by their roleplay name", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "Elowen", LN = "Duskwhisper" } })
+	Me.RPNames.ClearCache()
+
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+
+	Command( Me, "add elowen" )
+	check( Me.IsSelected( "Alice-MoonGuard" ), "the first name resolves" )
+
+	Command( Me, "remove Elowen Duskwhisper" )
+	check( not Me.IsSelected( "Alice-MoonGuard" ), "so does the whole name" )
+end)
+
+test( "the player menu shows the character name alongside the roleplay one", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "Elowen" } })
+	Me.RPNames.ClearCache()
+
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+	Me.Menu.OpenPlayerSelect( Me.Window.frame )
+
+	local entry = WoW.last_menu:Find( "Elowen" )
+	check( entry, "listed under the roleplay name" )
+	check( entry.text:find( "Alice", 1, true ),
+	       "with the character name too, since that's what commands take" )
+end)
+
+test( "text emotes are rewritten with the roleplay name", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "Elowen" } })
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.FireEvent( "CHAT_MSG_TEXT_EMOTE", "Alice waves at you.", "Alice",
+	               "Common", "", "", "", 0, 0, "", 0, 1, "Player-1-Alice" )
+
+	check( WindowHas( Me, "Elowen" ), "the roleplay name replaced the character one" )
+	check( WindowHas( Me, "waves at you." ), "and the emote body survived" )
+end)
+
+test( "Total RP 3 is preferred over MSP when both are present", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({ ["Alice-MoonGuard"] = { FN = "FromTRP" } })
+	WoW.InstallMSP({ ["Alice-MoonGuard"] = { NA = "FromMSP" } })
+	Me.RPNames.ClearCache()
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "FromTRP",
+	        "TRP3 has separate name fields, so it wins" )
+	equals( Me.RPNames.Source(), "Total RP 3", "and status reports it" )
+end)
+
+test( "MSP is used when Total RP 3 has no profile for someone", function()
+	local Me = StartSession()
+	WoW.InstallTRP3({})                                  -- installed, no profiles
+	WoW.InstallMSP({ ["Alice-MoonGuard"] = { NA = "Elowen" } })
+	Me.RPNames.ClearCache()
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Elowen", "falls through to MSP" )
+end)
+
+test( "the name cache expires on its own as time passes", function()
+	local Me = StartSession( nil, { trp3 = {} } )
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Alice", "no profile yet" )
+
+	WoW.TRP3AddProfile( "Alice-MoonGuard", { FN = "Elowen" } )
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Alice",
+	        "still the cached miss a moment later" )
+
+	WoW.gametime = WoW.gametime + 30
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Elowen",
+	        "the cache drops it once the ttl passes" )
+end)
+
+test( "a broken roleplay addon costs a name, not the window", function()
+	local Me = StartSession()
+
+	-- Something that looks like TRP3 but throws when queried.
+	_G.TRP3_API = {
+		register = {
+			isUnitIDKnown    = function() error( "boom" ) end;
+			getCharacterList = function() return {} end;
+		};
+	}
+	Me.RPNames.ClearCache()
+
+	Me.Window.Show()
+	Me.SetSelected( "Alice-MoonGuard", true )
+	WoW.Say( "CHAT_MSG_SAY", "well met", "Alice" )
+
+	equals( Me.DisplayName( "Alice-MoonGuard" ), "Alice", "falls back to the character" )
+	check( WindowHas( Me, "Alice: well met" ), "and the message still shows" )
 end)
 
 -------------------------------------------------------------------------------

@@ -95,6 +95,15 @@ local DEFAULT_DB = {
 		-- Print "so-and-so is nearby [Add]" when a new player is picked up.
 		announce_new = false;
 
+		-- Show the roleplay name from Total RP 3 / MyRolePlay / XRP instead of
+		-- the character name, where one has been received.
+		rp_names  = true;
+
+		-- Use the profile's own name color rather than the class color. Off by
+		-- default: class colors carry information, and custom colors are not
+		-- always readable on the window's background.
+		rp_colors = false;
+
 		timestamps = true;
 		font_size  = 12;
 		locked     = false;
@@ -255,6 +264,28 @@ function Me.ShortName( full )
 end
 
 -------------------------------------------------------------------------------
+-- The name to show for a player: their roleplay name when we have one and the
+-- option is on, otherwise the character name.
+--
+-- Identity is always the character name. This is display only.
+--
+function Me.DisplayName( full )
+	if not full then return "" end
+
+	if Me.db and Me.db.settings.rp_names then
+		local rp = Me.RPNames.Get( full )
+		if rp then
+			Me.RPNames.NoteDisplayed( full, rp )
+			return rp
+		end
+	end
+
+	local short = Me.ShortName( full )
+	Me.RPNames.NoteDisplayed( full, short )
+	return short
+end
+
+-------------------------------------------------------------------------------
 function Me.MyFullName()
 	local name = UnitName( "player" )
 	if Me.IsSecret( name ) then return nil end
@@ -287,6 +318,20 @@ function Me.ResolveName( input )
 	for name in pairs( known ) do
 		if name:lower() == lowered or Me.ShortName( name ):lower() == lowered then
 			return name
+		end
+	end
+
+	-- Then by roleplay name, so "/sw add elowen" works when that's the only
+	-- name you've seen. Both the whole name and its first word are accepted.
+	if Me.db.settings.rp_names then
+		for name in pairs( known ) do
+			local rp = Me.RPNames.Get( name )
+			if rp then
+				rp = rp:lower()
+				if rp == lowered or rp:match( "^%S+" ) == lowered then
+					return name
+				end
+			end
 		end
 	end
 
@@ -425,6 +470,7 @@ function Me.OnPlayerLogin()
 	-- players survive this, so a filter set up last week still works.
 	Me.Roster.Prune()
 
+	Me.RPNames.Setup()
 	Me.Window.Create()
 	Me.Minimap.Create()
 

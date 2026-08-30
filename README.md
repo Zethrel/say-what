@@ -23,6 +23,8 @@ from scratch with no library dependencies.
 - **Manage players from chat** — `/sw list` prints the roster with clickable
   `[+]` / `[-]` buttons, and right-clicking a player's name in the chat window
   gets a *SayWhat: Add to Nearby* entry.
+- **Roleplay names** — shows the name from Total RP 3, MyRolePlay or XRP when
+  a profile has been received, and corrects itself when one arrives late.
 - **Persistent selection** — saved variables remember your picks per character
   through reloads, relogs and expansions' worth of sessions.
 - **Retroactive filtering** — adding someone shows what they already said this
@@ -122,6 +124,36 @@ Consequences worth knowing:
   allowed to read. Those messages are dropped: SayWhat can neither display nor
   track what it cannot read. Everywhere else works normally.
 
+## Roleplay names
+
+If you have **Total RP 3**, **MyRolePlay** or **XRP** installed, the window
+shows people under their roleplay name instead of their character name.
+Total RP 3 is read directly (its title, first name and last name are separate
+fields); MyRolePlay and XRP are read through LibMSP, where the name arrives as
+one string and a leading title is stripped heuristically.
+
+Neither is a dependency. With no roleplay addon installed nothing changes.
+
+Three things worth knowing:
+
+- **You only get a name for a profile you've actually received.** RP addons
+  fetch profiles on mouseover, target or proximity, so someone who speaks from
+  across the square may show as their character name at first. The window
+  rewrites the lines already on screen once their profile lands — through the
+  addon's own update event where there is one, and a 5-second poll as a
+  backstop.
+- **Identity is always the character name.** Roleplay names aren't unique and
+  people change them mid-session, so the roster, the selection and the saved
+  variables all stay keyed on `Character-Realm`. Only what you see changes. A
+  filter set up under one roleplay name keeps working after it changes.
+- **Commands accept both.** `/sw add elowen` works on a roleplay name (whole
+  name or first name) as well as the character name, and the Players menu lists
+  both so you can see who you're actually ticking.
+
+Turn it off under *Options → Roleplay names*. *Roleplay name colors* uses the
+profile's own color instead of the class color; it's off by default because
+class colors carry information and custom colors aren't always readable.
+
 ## Options
 
 In the **Players → Options** submenu:
@@ -131,6 +163,7 @@ In the **Players → Options** submenu:
 - **Counts as nearby** — which chat types add someone to the roster.
 - **Include my own chat** — your own say/emote rides along with the
   conversation.
+- **Roleplay names** and **Roleplay name colors** — see above.
 - **Timestamps**, **font size**, **lock window**, **minimap button**.
 - **Open window on new message** — pop the window up when a selected player
   speaks.
@@ -157,6 +190,7 @@ SayWhat/                 The addon folder - this is what you copy into AddOns
   src/core.lua           Namespace, saved variables, name handling, chat pipeline
   src/roster.lua         The nearby roster and the player selection
   src/log.lua            Rolling in-memory message buffer
+  src/rpnames.lua        Roleplay names from Total RP 3 / MyRolePlay / XRP
   src/menu.lua           Player selection menu, options, unit right-click entry
   src/window.lua         The Nearby window
   src/minimap.lua        The minimap button
@@ -204,6 +238,10 @@ through in game after any change:
    in the default chat frame and use the *SayWhat* entry.
 7. **Instances** — zone into a dungeon and confirm the addon stays quiet and
    error-free (chat is unreadable to addons there).
+8. **Roleplay names** — with TRP3 running, confirm a selected player shows
+   their RP name, and that someone whose profile you haven't loaded starts as a
+   character name and switches over within a few seconds of you mousing over
+   them. `/sw status` reports which roleplay addon was detected.
 
 ## License
 
