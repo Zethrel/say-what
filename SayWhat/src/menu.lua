@@ -160,8 +160,17 @@ local function PlayerEntries()
 
 	for _, item in ipairs( list ) do
 		local marker = item.nearby and "|cff40ff40*|r " or "|cff808080-|r "
-		local label  = string.format( "%s%s |cff808080(%s)|r",
-		               marker, Me.ColorName( item.name ), AgeText( item.last ))
+
+		-- When someone is shown under a roleplay name, the character name is
+		-- still what you'd type in a command, so keep both in view here.
+		local suffix = AgeText( item.last )
+		local character = Me.ShortName( item.name )
+		if Me.DisplayName( item.name ) ~= character then
+			suffix = character .. ", " .. suffix
+		end
+
+		local label = string.format( "%s%s |cff808080(%s)|r",
+		              marker, Me.ColorName( item.name ), suffix )
 
 		table.insert( entries, {
 			type    = "checkbox";
@@ -218,6 +227,12 @@ local function OptionsEntries()
 		  entries = EventEntries( "track_events" ) },
 
 		{ type = "divider" },
+
+		Flag( "rp_names", "Roleplay names", function()
+			Me.RPNames.ClearCache()
+			Me.Window.Refresh()
+		end ),
+		Flag( "rp_colors", "Roleplay name colors", function() Me.Window.Refresh() end ),
 
 		Flag( "include_self", "Include my own chat", function() Me.Window.Refresh() end ),
 		Flag( "timestamps",   "Timestamps",          function() Me.Window.Refresh() end ),
@@ -277,7 +292,7 @@ end
 --
 function Menu.OpenPlayer( owner, full )
 	local entries = {
-		{ type = "title", text = Me.ShortName( full ) },
+		{ type = "title", text = Me.DisplayName( full ) },
 
 		{ type = "button";
 		  text = Me.IsSelected( full ) and "Remove from Nearby" or "Add to Nearby";

@@ -114,6 +114,15 @@ local function PrintStatus()
 	Me.Print( "Shown in window: %s.",
 	          #shown > 0 and table.concat( shown, ", " ) or "nothing" )
 	Me.Print( "Buffered messages: %d.", #Me.Log.All() )
+
+	local source = Me.RPNames.Source()
+	if not Me.db.settings.rp_names then
+		Me.Print( "Roleplay names: off." )
+	elseif source then
+		Me.Print( "Roleplay names: on, reading %s.", source )
+	else
+		Me.Print( "Roleplay names: on, but no roleplay addon was found." )
+	end
 end
 
 -------------------------------------------------------------------------------

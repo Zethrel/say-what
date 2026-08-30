@@ -7,12 +7,14 @@
 ## SavedVariablesPerCharacter: SayWhatCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Ear_Human_01
 ## AddonCompartmentFunc: SayWhat_OnCompartmentClick
+## OptionalDeps: totalRP3, MyRolePlay, XRP
 ## X-Category: Chat
 ## X-License: MIT
 
 src\core.lua
 src\roster.lua
 src\log.lua
+src\rpnames.lua
 src\menu.lua
 src\window.lua
 src\links.lua

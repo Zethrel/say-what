@@ -136,6 +136,11 @@ function M.Install( opts )
 	_G.time = os.time
 	_G.date = os.date
 
+	-- The game's uptime clock. Held still by default so cache expiry is
+	-- deterministic; a test that wants time to pass sets WoW.gametime.
+	M.gametime = 0
+	_G.GetTime = function() return M.gametime end
+
 	_G.DEFAULT_CHAT_FRAME = Widget.new( "Frame", "DefaultChatFrame" )
 	_G.DEFAULT_CHAT_FRAME.AddMessage = function( self, text )
 		table.insert( M.chat_output, text )
@@ -304,6 +309,100 @@ function M.InstallMenuMock()
 	}
 
 	M.NewMenuNode = NewNode
+end
+
+-------------------------------------------------------------------------------
+-- Roleplay addon mocks
+-------------------------------------------------------------------------------
+
+-- Total RP 3. `profiles` maps "Character-Realm" to a characteristics table,
+-- e.g. { FN = "Elowen", LN = "Duskwhisper", CH = "aa66cc", IC = "spell_holy" }.
+--
+function M.InstallTRP3( profiles )
+	M.trp3 = { profiles = profiles or {}, callbacks = {}, ready = true }
+
+	_G.TRP3_API = {
+		register = {
+			getCharacterList = function()
+				return M.trp3.ready and M.trp3.profiles or nil
+			end;
+			isUnitIDKnown = function( unit_id )
+				return M.trp3.profiles[unit_id] ~= nil
+			end;
+			getUnitIDCurrentProfile = function( unit_id )
+				local ch = M.trp3.profiles[unit_id]
+				return ch and { characteristics = ch } or nil
+			end;
+		};
+
+		globals = {
+			player_id       = M.player .. "-" .. M.realm;
+			player_realm_id = M.realm;
+		};
+
+		profile = {
+			getData = function()
+				local ch = M.trp3.profiles[M.player .. "-" .. M.realm]
+				return ch and { characteristics = ch } or nil
+			end;
+		};
+
+		Events = {
+			REGISTER_DATA_UPDATED = "REGISTER_DATA_UPDATED";
+			registerCallback = function( event, callback )
+				table.insert( M.trp3.callbacks, { event = event, fn = callback } )
+			end;
+		};
+	}
+end
+
+-- A profile arriving after the fact, which is the normal case: you hear
+-- someone before their profile has been fetched.
+--
+function M.TRP3AddProfile( unit_id, characteristics )
+	M.trp3.profiles[unit_id] = characteristics
+end
+
+function M.TRP3FireUpdate()
+	for _, entry in ipairs( M.trp3.callbacks ) do
+		entry.fn()
+	end
+end
+
+-- LibMSP, which is what MyRolePlay and XRP populate. `chars` maps a name to
+-- its fields, e.g. { NA = "Lady Elowen Duskwhisper" }.
+--
+function M.InstallMSP( chars )
+	local char = {}
+	for name, fields in pairs( chars or {} ) do
+		char[name] = { supported = true, field = fields }
+	end
+
+	_G.msp = { char = char, callback = { received = {} } }
+	M.msp = _G.msp
+end
+
+function M.MSPFireReceived( name )
+	for _, callback in ipairs( M.msp.callback.received ) do
+		callback( name )
+	end
+end
+
+-------------------------------------------------------------------------------
+-- Run every one-shot timer that's been scheduled (C_Timer.After), the way the
+-- game would once their delay elapsed. Tickers are left alone.
+--
+function M.RunTimers()
+	local pending = M.timers
+	M.timers = {}
+
+	for _, timer in ipairs( pending ) do
+		if timer.ticker then
+			table.insert( M.timers, timer )
+		else
+			timer.fn()
+		end
+	end
 end
 
 -------------------------------------------------------------------------------
