@@ -61,6 +61,15 @@ folder out yourself.
 
 Building the same zip locally, if you'd rather: `sh tools/package.sh`.
 
+### Cutting a release
+
+1. Bump `## Version:` in `SayWhat/SayWhat.toc` — that, not the tag, is where
+   the version comes from.
+2. Tag and push it, or publish a release from the web UI. Either fires the
+   release workflow, which runs the tests, builds the zip, checks it unpacks as
+   `SayWhat/`, and attaches it to the release. The tag can be named whatever
+   you like.
+
 ### The addon doesn't appear in the list
 
 In order of likelihood:
