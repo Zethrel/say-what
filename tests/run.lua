@@ -11,6 +11,10 @@
 
 local ROOT = (arg and arg[0] and arg[0]:match( "^(.*)tests[/\\]run%.lua$" )) or "./"
 
+-- The addon folder has to be named after its toc, so it lives in a subfolder
+-- of the repository rather than at the root.
+local ADDON = ROOT .. "SayWhat/"
+
 local WoW = dofile( ROOT .. "tests/wowmock.lua" )
 
 -------------------------------------------------------------------------------
@@ -46,7 +50,7 @@ end
 -- The load order out of the TOC.
 local function LoadOrder()
 	local files = {}
-	local toc = assert( io.open( ROOT .. "SayWhat.toc" ), "SayWhat.toc not found" )
+	local toc = assert( io.open( ADDON .. "SayWhat.toc" ), "SayWhat.toc not found" )
 	for line in toc:lines() do
 		line = line:gsub( "\r", "" )
 		if line:match( "%.lua%s*$" ) and not line:match( "^%s*#" ) then
@@ -73,7 +77,7 @@ local function StartSession( saved, opts )
 
 	local Me = {}
 	for _, file in ipairs( FILES ) do
-		local chunk = assert( loadfile( ROOT .. file ) )
+		local chunk = assert( loadfile( ADDON .. file ) )
 		chunk( "SayWhat", Me )
 	end
 

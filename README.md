@@ -30,9 +30,45 @@ from scratch with no library dependencies.
 
 ## Installing
 
-Copy the `SayWhat` folder into `World of Warcraft\_retail_\Interface\AddOns\`,
-so that `Interface\AddOns\SayWhat\SayWhat.toc` exists. The repository is laid
-out as the addon folder itself, so cloning it as `SayWhat` is enough.
+Copy the **`SayWhat`** folder from this repository into
+`World of Warcraft\_retail_\Interface\AddOns\`, so that this exact path
+exists:
+
+```
+Interface\AddOns\SayWhat\SayWhat.toc
+```
+
+Copy the `SayWhat` folder, not the repository folder. WoW requires an addon's
+folder name to match its `.toc` filename exactly, and this repository is called
+`say-what`, which does not match. That's why the addon lives in a subfolder.
+
+**Then restart the game client.** WoW only scans `Interface\AddOns` when it
+launches; `/reload` re-runs the addons it already found and will never pick up a
+newly added folder.
+
+### The addon doesn't appear in the list
+
+In order of likelihood:
+
+1. **The folder name is wrong.** `Interface\AddOns\say-what\SayWhat.toc` does
+   not work, and neither does a nested `SayWhat\SayWhat\SayWhat.toc` (which is
+   what unzipping a GitHub download usually gives you). The `.toc` has to sit
+   directly inside a folder named `SayWhat`.
+2. **The client wasn't restarted.** See above — `/reload` is not enough.
+3. **You're looking at the wrong game version.** `_retail_`, not `_classic_`.
+   This addon targets retail.
+
+Once it is listed, if it shows greyed out or *Out of Date*, your client is on a
+different patch than the `## Interface:` line in the `.toc`. Tick **Load out of
+date AddOns** in the AddOns list, and tell me the patch so I can bump it.
+
+To confirm the game found it, run this in game:
+
+```
+/dump C_AddOns.GetAddOnInfo("SayWhat")
+```
+
+A `nil` name means the folder still isn't where WoW is looking.
 
 ## Commands
 
@@ -113,15 +149,16 @@ starts empty each session.
 ## Layout
 
 ```
-SayWhat.toc          Addon manifest and load order
-src/core.lua         Namespace, saved variables, name handling, chat pipeline
-src/roster.lua       The nearby roster and the player selection
-src/log.lua          Rolling in-memory message buffer
-src/menu.lua         Player selection menu, options, unit right-click entry
-src/window.lua       The Nearby window
-src/links.lua        Clickable [+]/[-] chat links
-src/commands.lua     Slash commands
-tests/               Headless test suite (see below)
+SayWhat/                 The addon folder - this is what you copy into AddOns
+  SayWhat.toc            Addon manifest and load order
+  src/core.lua           Namespace, saved variables, name handling, chat pipeline
+  src/roster.lua         The nearby roster and the player selection
+  src/log.lua            Rolling in-memory message buffer
+  src/menu.lua           Player selection menu, options, unit right-click entry
+  src/window.lua         The Nearby window
+  src/links.lua          Clickable [+]/[-] chat links
+  src/commands.lua       Slash commands
+tests/                   Headless test suite (see below), not shipped
 ```
 
 ## Tests
