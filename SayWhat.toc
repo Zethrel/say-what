@@ -1,4 +1,4 @@
-## Interface: 120007
+## Interface: 120100
 ## Title: SayWhat
 ## Notes: Tracks players who talk in /say range and mirrors them into a dedicated Nearby window.
 ## Author: Zethrel
