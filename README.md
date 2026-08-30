@@ -27,6 +27,8 @@ from scratch with no library dependencies.
   through reloads, relogs and expansions' worth of sessions.
 - **Retroactive filtering** — adding someone shows what they already said this
   session, instead of an empty window.
+- **Minimap button** — left-click toggles the window, right-click opens the
+  player menu, drag it around the ring. There's an AddOn Compartment entry too.
 
 ## Installing
 
@@ -87,6 +89,7 @@ A `nil` name means the folder still isn't where WoW is looking.
 | `/sw forget` | Empty the roster (selected players are kept) |
 | `/sw show`, `/sw hide` | Open/close the window |
 | `/sw lock`, `/sw unlock` | Lock the window's position and size |
+| `/sw minimap` | Show or hide the minimap button |
 | `/sw status` | Print what the addon currently thinks is going on |
 | `/sw help` | The list above, in game |
 
@@ -128,7 +131,7 @@ In the **Players → Options** submenu:
 - **Counts as nearby** — which chat types add someone to the roster.
 - **Include my own chat** — your own say/emote rides along with the
   conversation.
-- **Timestamps**, **font size**, **lock window**.
+- **Timestamps**, **font size**, **lock window**, **minimap button**.
 - **Open window on new message** — pop the window up when a selected player
   speaks.
 - **Announce new players in chat** — print `X is nearby [+]` the first time
@@ -138,7 +141,7 @@ In the **Players → Options** submenu:
 
 | File | Holds |
 | --- | --- |
-| `SayWhatDB` (account-wide) | Settings and the window's position, size and font |
+| `SayWhatDB` (account-wide) | Settings, the window's position/size/font, the minimap button's angle |
 | `SayWhatCharDB` (per character) | The nearby roster and which players are selected |
 
 Proximity is a per-character thing, so the roster and your selection live with
@@ -156,6 +159,7 @@ SayWhat/                 The addon folder - this is what you copy into AddOns
   src/log.lua            Rolling in-memory message buffer
   src/menu.lua           Player selection menu, options, unit right-click entry
   src/window.lua         The Nearby window
+  src/minimap.lua        The minimap button
   src/links.lua          Clickable [+]/[-] chat links
   src/commands.lua       Slash commands
 tests/                   Headless test suite (see below), not shipped

@@ -84,6 +84,7 @@ local HELP = {
 	"  |cffffff00/sw clear|r - deselect everyone.",
 	"  |cffffff00/sw forget|r - empty the roster of players you haven't picked.",
 	"  |cffffff00/sw show|r, |cffffff00/sw hide|r, |cffffff00/sw lock|r",
+	"  |cffffff00/sw minimap|r - show or hide the minimap button.",
 	"  |cffffff00/sw status|r - what the addon currently thinks is going on.",
 }
 
@@ -171,6 +172,10 @@ function Me.RunCommand( msg )
 		Me.db.settings.locked = false
 		Me.Window.ApplySettings()
 		Me.Print( "Window unlocked." )
+
+	elseif command == "minimap" then
+		local shown = Me.Minimap.SetShown( nil )
+		Me.Print( shown and "Minimap button shown." or "Minimap button hidden." )
 
 	elseif command == "status" then
 		PrintStatus()

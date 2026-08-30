@@ -15,5 +15,6 @@ src\roster.lua
 src\log.lua
 src\menu.lua
 src\window.lua
+src\minimap.lua
 src\links.lua
 src\commands.lua
