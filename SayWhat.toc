@@ -1,0 +1,19 @@
+## Interface: 120007
+## Title: SayWhat
+## Notes: Tracks players who talk in /say range and mirrors them into a dedicated Nearby window.
+## Author: Zethrel
+## Version: 1.0.0
+## SavedVariables: SayWhatDB
+## SavedVariablesPerCharacter: SayWhatCharDB
+## IconTexture: Interface\Icons\INV_Misc_Ear_Human_01
+## AddonCompartmentFunc: SayWhat_OnCompartmentClick
+## X-Category: Chat
+## X-License: MIT
+
+src\core.lua
+src\roster.lua
+src\log.lua
+src\menu.lua
+src\window.lua
+src\links.lua
+src\commands.lua
