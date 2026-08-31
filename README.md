@@ -65,10 +65,11 @@ Building the same zip locally, if you'd rather: `sh tools/package.sh`.
 
 1. Bump `## Version:` in `SayWhat/SayWhat.toc` — that, not the tag, is where
    the version comes from.
-2. Tag and push it, or publish a release from the web UI. Either fires the
-   release workflow, which runs the tests, builds the zip, checks it unpacks as
-   `SayWhat/`, and attaches it to the release. The tag can be named whatever
-   you like.
+2. Tag and push it, publish a release from the web UI, or run the **Release**
+   workflow from the Actions tab and give it a tag name. All three fire the
+   same workflow, which runs the tests, builds the zip, checks it unpacks as
+   `SayWhat/`, and attaches it to the release — creating the tag if it doesn't
+   exist yet. The tag can be named whatever you like.
 
 ### The addon doesn't appear in the list
 

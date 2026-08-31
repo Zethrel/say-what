@@ -11,7 +11,9 @@
 # "## Version:" in SayWhat/SayWhat.toc before tagging.
 #
 # Works whether you push a tag or publish a release from the web UI, which
-# creates the tag and fires this the same way.
+# creates the tag and fires this the same way. It can also be run by hand from
+# the Actions tab, naming the tag to create or attach to, which is how you cut
+# a release without a local clone.
 
 name: Release
 
@@ -19,6 +21,13 @@ on:
   push:
     tags:
       - '*'
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create or attach to, e.g. SayWhat-v1.1.1'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -35,6 +44,15 @@ jobs:
 
       - name: Run the test suite
         run: lua5.1 tests/run.lua
+
+      # A tag push brings its own name; a manual run is told one.
+      - name: Work out which tag we're releasing
+        id: tag
+        run: |
+          tag="${{ inputs.tag }}"
+          if [ -z "$tag" ]; then tag="$GITHUB_REF_NAME"; fi
+          echo "name=$tag" >> "$GITHUB_OUTPUT"
+          echo "Releasing as $tag"
 
       # tools/package.sh builds the zip and asserts it contains
       # SayWhat/SayWhat.toc, so the check lives in one place and anyone can
@@ -58,13 +76,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           asset="${{ steps.build.outputs.asset }}"
+          tag="${{ steps.tag.outputs.name }}"
 
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release already exists, uploading the asset to it."
-            gh release upload "$GITHUB_REF_NAME" "$asset" --clobber
+            gh release upload "$tag" "$asset" --clobber
           else
-            gh release create "$GITHUB_REF_NAME" \
-              --title "SayWhat $GITHUB_REF_NAME" \
+            # --target creates the tag at this commit when it doesn't exist,
+            # which is what a manual run needs. It's ignored for a tag push.
+            gh release create "$tag" \
+              --target "$GITHUB_SHA" \
+              --title "SayWhat $tag" \
               --generate-notes \
               "$asset"
           fi
