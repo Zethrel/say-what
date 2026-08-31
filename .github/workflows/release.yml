@@ -28,12 +28,19 @@ on:
         description: 'Tag to create or attach to, e.g. SayWhat-v1.1.1'
         required: true
         type: string
+      retitle_only:
+        description: 'Only fix an existing release title, build and publish nothing'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
   package:
+    # Skipped for a retitle, which touches nothing but the title.
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.retitle_only }}
     runs-on: ubuntu-latest
 
     steps:
@@ -99,3 +106,26 @@ jobs:
               --generate-notes \
               "$asset"
           fi
+
+  # Fixes the title of a release that already exists, for one titled before a
+  # change to how titles are built. It reads the version from the toc *at that
+  # tag*, so an old release gets its own version rather than whatever main is
+  # on now, and it touches nothing else about the release.
+  retitle:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.retitle_only }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Retitle from that tag's addon version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/^## Version: *//p' SayWhat/SayWhat.toc | tr -d '\r')
+          test -n "$version"
+
+          echo "Retitling ${{ inputs.tag }} to \"SayWhat $version\""
+          gh release edit "${{ inputs.tag }}" --title "SayWhat $version"
