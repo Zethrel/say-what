@@ -54,6 +54,13 @@ jobs:
           echo "name=$tag" >> "$GITHUB_OUTPUT"
           echo "Releasing as $tag"
 
+      - name: Read the addon version
+        id: version
+        run: |
+          version=$(sed -n 's/^## Version: *//p' SayWhat/SayWhat.toc | tr -d '\r')
+          test -n "$version"
+          echo "name=$version" >> "$GITHUB_OUTPUT"
+
       # tools/package.sh builds the zip and asserts it contains
       # SayWhat/SayWhat.toc, so the check lives in one place and anyone can
       # run the same thing locally.
@@ -84,9 +91,11 @@ jobs:
           else
             # --target creates the tag at this commit when it doesn't exist,
             # which is what a manual run needs. It's ignored for a tag push.
+            # Titled from the addon version rather than the tag: tag names
+            # vary, and one that already says "SayWhat" would read twice.
             gh release create "$tag" \
               --target "$GITHUB_SHA" \
-              --title "SayWhat $tag" \
+              --title "SayWhat ${{ steps.version.outputs.name }}" \
               --generate-notes \
               "$asset"
           fi
