@@ -2,7 +2,7 @@
 ## Title: SayWhat
 ## Notes: Tracks players who talk in /say range and mirrors them into a dedicated Nearby window.
 ## Author: Zethrel
-## Version: 1.1.1
+## Version: 1.1.2
 ## SavedVariables: SayWhatDB
 ## SavedVariablesPerCharacter: SayWhatCharDB
 ## IconTexture: Interface\Icons\INV_Misc_Ear_Human_01
