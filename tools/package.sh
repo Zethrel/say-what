@@ -7,15 +7,27 @@
 set -eu
 
 version=$(sed -n 's/^## Version: *//p' SayWhat/SayWhat.toc)
-output="SayWhat-v${version}.zip"
+output="$PWD/SayWhat-v${version}.zip"
+
+# Assembled in a staging directory rather than zipping SayWhat/ in place, so
+# the license can travel with the addon without a second copy of it living in
+# the repository. One LICENSE at the root stays the only one to keep current.
+staging=$(mktemp -d)
+trap 'rm -rf "$staging"' EXIT INT TERM
+
+cp -R SayWhat "$staging/SayWhat"
+cp LICENSE "$staging/SayWhat/LICENSE"
 
 rm -f "$output"
-zip -rq "$output" SayWhat
+( cd "$staging" && zip -rq "$output" SayWhat )
 
-# The whole point of this script: fail loudly if the folder name is wrong.
-unzip -l "$output" | grep -q 'SayWhat/SayWhat.toc' || {
-	echo "the zip does not contain SayWhat/SayWhat.toc" >&2
-	exit 1
-}
+# The whole point of this script: fail loudly if what we built is not what a
+# player can actually install.
+for required in 'SayWhat/SayWhat.toc' 'SayWhat/LICENSE'; do
+	unzip -l "$output" | grep -q "$required" || {
+		echo "the zip does not contain $required" >&2
+		exit 1
+	}
+done
 
-echo "$output"
+basename "$output"
