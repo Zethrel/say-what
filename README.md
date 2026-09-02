@@ -272,4 +272,15 @@ through in game after any change:
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+**Proprietary — all rights reserved.** See [LICENSE](LICENSE).
+
+You're welcome to download SayWhat and use it in game. You may not
+redistribute it, modify it, publish it elsewhere, or reuse its source code in
+another project without written permission.
+
+One thing a license cannot do: while this repository is public, GitHub's Terms
+of Service let any user fork it, whatever the LICENSE file says. The license
+governs what someone may lawfully *do* with the code; it does not remove the
+fork button. Making the repository private is the only way to prevent copying
+outright — at the cost of testers no longer being able to reach the releases
+without an invitation.

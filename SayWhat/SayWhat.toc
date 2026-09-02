@@ -9,7 +9,7 @@
 ## AddonCompartmentFunc: SayWhat_OnCompartmentClick
 ## OptionalDeps: totalRP3, MyRolePlay, XRP
 ## X-Category: Chat
-## X-License: MIT
+## X-License: All Rights Reserved
 
 src\core.lua
 src\roster.lua
