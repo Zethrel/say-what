@@ -59,7 +59,9 @@ is one level too deep. The release asset is built to unpack correctly as
 `SayWhat`; the source zip needs you to reach inside it and copy the `SayWhat`
 folder out yourself.
 
-Building the same zip locally, if you'd rather: `sh tools/package.sh`.
+Building the same zip locally, if you'd rather: `sh tools/package.sh`. The
+zip carries a copy of the license alongside the addon, staged in at build time
+so the `LICENSE` at the repository root stays the only one to keep current.
 
 ### Cutting a release
 
@@ -222,7 +224,7 @@ SayWhat/                 The addon folder - this is what you copy into AddOns
   src/links.lua          Clickable [+]/[-] chat links
   src/commands.lua       Slash commands
 tests/                   Headless test suite (see below), not shipped
-tools/package.sh         Builds the release zip
+tools/package.sh         Builds the release zip (stages LICENSE into it)
 .github/workflows/       Builds and publishes that zip on a version tag
 ```
 
